@@ -1,0 +1,421 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grow@Home - AI-Powered Gardening Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F9FAF8;
+            color: #2D3748;
+        }
+        .hero-bg {
+            background: linear-gradient(135deg, #68D391, #2F855A);
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle, rgba(255,255,255,0.2), transparent);
+            opacity: 0.3;
+        }
+        .section-padding {
+            padding: 6rem 1.5rem;
+        }
+        .feature-card, .kit-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+        }
+        .feature-card:hover, .kit-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .carousel {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 1rem;
+        }
+        .carousel::-webkit-scrollbar {
+            display: none;
+        }
+        .carousel-item {
+            flex: 0 0 auto;
+            scroll-snap-align: start;
+            margin-right: 1.5rem;
+        }
+        .rounded-soft {
+            border-radius: 1.75rem;
+        }
+        .cta-button {
+            background: linear-gradient(90deg, #48BB78, #38A169);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+        }
+        .cta-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+        .secondary-button {
+            border: 2px solid #48BB78;
+            color: #48BB78;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .secondary-button:hover {
+            background-color: #48BB78;
+            color: #FFFFFF;
+        }
+        .icon-container {
+            background: #E6FFFA;
+            padding: 1rem;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        model-viewer {
+            width: 100%;
+            height: 400px;
+            max-width: 600px;
+            margin: 0 auto;
+            --poster-color: transparent;
+        }
+        .download-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+        }
+        .navbar {
+            background-color: #FFFFFF;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .logo {
+            height: 40px;
+            width: auto;
+        }
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            h2 {
+                font-size: 2rem;
+            }
+            .section-padding {
+                padding: 3rem 1rem;
+            }
+            .download-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            model-viewer {
+                height: 300px;
+            }
+            .logo {
+                height: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar py-4 px-6">
+        <div class="container mx-auto flex items-center">
+            <a href="index.html" class="flex items-center space-x-2">
+                <img src="https://raw.githubusercontent.com/purnavenkat777/Grow-home/main/logo.png" alt="Grow@Home Logo" class="logo">
+                <span class="text-lg font-semibold text-green-800">Grow@Home</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-bg text-white text-center section-padding relative">
+        <div class="absolute inset-0 bg-green-900 opacity-40"></div>
+        <div class="relative z-10 container mx-auto">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 leading-tight">Grow Organic Food at Home with Ease</h1>
+            <p class="text-lg md:text-2xl mb-8 max-w-2xl mx-auto">Let AI guide your gardening journey – from seed to harvest.</p>
+            <model-viewer 
+                src="https://raw.githubusercontent.com/purnavenkat777/Grow-home/main/ImageToStl.com_Plant%2BFBX.glb" 
+                alt="3D Plant Model" 
+                camera-controls 
+                auto-rotate 
+                ar 
+                ar-modes="webxr scene-viewer quick-look">
+                <!-- Fallback model: src="https://modelviewer.dev/assets/Sunflower.glb" ios-src="https://modelviewer.dev/assets/Sunflower.usdz" poster="https://modelviewer.dev/assets/Sunflower.jpg" -->
+                <div slot="poster" class="text-center text-gray-200">Loading 3D plant model...</div>
+            </model-viewer>
+            <div class="space-x-4 mt-8">
+                <a href="https://v0-grow-home-onboarding.vercel.app/" class="cta-button text-white font-semibold py-4 px-8 rounded-soft inline-block">Try Web App</a>
+                <a href="#download" class="cta-button text-white font-semibold py-4 px-8 rounded-soft inline-block">Get Started</a>
+                <a href="#demo" class="secondary-button font-semibold py-4 px-8 rounded-soft inline-block">Watch Demo</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="bg-white section-padding">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-16 text-green-800">How It Works</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                <div class="p-8">
+                    <div class="icon-container mb-6">
+                        <i class="fas fa-seedling text-3xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-xl md:text-2xl font-semibold mb-4">Personalized Setup</h3>
+                    <p class="text-gray-600">Answer a few simple questions to start your gardening journey.</p>
+                </div>
+                <div class="p-8">
+                    <div class="icon-container mb-6">
+                        <i class="fas fa-tools text-3xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-xl md:text-2xl font-semibold mb-4">Smart Recommendations</h3>
+                    <p class="text-gray-600">Get seeds, tools & kits matched to your space.</p>
+                </div>
+                <div class="p-8">
+                    <div class="icon-container mb-6">
+                        <i class="fas fa-mobile-alt text-3xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-xl md:text-2xl font-semibold mb-4">AR Preview & Daily Tasks</h3>
+                    <p class="text-gray-600">Visualize your garden and follow daily care tips.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="bg-green-50 section-padding">
+        <div class="container mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16 text-green-800">Features</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="feature-card p-8 rounded-soft flex items-start">
+                    <div class="icon-container mr-4">
+                        <i class="fas fa-leaf text-2xl text-green-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg md:text-xl font-semibold mb-2">AI-Based Garden Plans</h3>
+                        <p class="text-gray-600">Tailored plans for your space and climate.</p>
+                    </div>
+                </div>
+                <div class="feature-card p-8 rounded-soft flex items-start">
+                    <div class="icon-container mr-4">
+                        <i class="fas fa-vr-cardboard text-2xl text-green-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg md:text-xl font-semibold mb-2">AR Garden Layout Visualization</h3>
+                        <p class="text-gray-600">Preview your garden in augmented reality.</p>
+                    </div>
+                </div>
+                <div class="feature-card p-8 rounded-soft flex items-start">
+                    <div class="icon-container mr-4">
+                        <i class="fas fa-calendar-alt text-2xl text-green-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg md:text-xl font-semibold mb-2">Smart Harvest Calendar</h3>
+                        <p class="text-gray-600">Know exactly when to harvest.</p>
+                    </div>
+                </div>
+                <div class="feature-card p-8 rounded-soft flex items-start">
+                    <div class="icon-container mr-4">
+                        <i class="fas fa-tasks text-2xl text-green-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg md:text-xl font-semibold mb-2">Task System with Photo Verification</h3>
+                        <p class="text-gray-600">Track progress with photo uploads.</p>
+                    </div>
+                </div>
+                <div class="feature-card p-8 rounded-soft flex items-start">
+                    <div class="icon-container mr-4">
+                        <i class="fas fa-gift text-2xl text-green-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg md:text-xl font-semibold mb-2">Green Points & Rewards</h3>
+                        <p class="text-gray-600">Earn points for gardening milestones.</p>
+                    </div>
+                </div>
+                <div class="feature-card p-8 rounded-soft flex items-start">
+                    <div class="icon-container mr-4">
+                        <i class="fas fa-store text-2xl text-green-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg md:text-xl font-semibold mb-2">Local Store Finder</h3>
+                        <p class="text-gray-600">Find nearby gardening stores.</p>
+                    </div>
+                </div>
+                <div class="feature-card p-8 rounded-soft flex items-start">
+                    <div class="icon-container mr-4">
+                        <i class="fas fa-user-md text-2xl text-green-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg md:text-xl font-semibold mb-2">Chat with Garden Doctor</h3>
+                        <p class="text-gray-600">Get expert advice anytime.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Starter Kits & Tools -->
+    <section class="bg-white section-padding">
+        <div class="container mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16 text-green-800">Starter Kits & Tools</h2>
+            <div class="carousel">
+                <div class="carousel-item kit-card bg-green-50 p-8 rounded-soft w-80">
+                    <div class="icon-container mb-6">
+                        <i class="fas fa-seedling text-3xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-lg md:text-xl font-semibold mb-3">Beginner Garden Kit</h3>
+                    <p class="text-gray-600 mb-4">Everything you need to start growing.</p>
+                    <a href="#buy" class="cta-button text-white font-semibold py-3 px-6 rounded-soft inline-block">Buy Now</a>
+                </div>
+                <div class="carousel-item kit-card bg-green-50 p-8 rounded-soft w-80">
+                    <div class="icon-container mb-6">
+                        <i class="fas fa-tools text-3xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-lg md:text-xl font-semibold mb-3">Gardening Tools Set</h3>
+                    <p class="text-gray-600 mb-4">High-quality tools for easy gardening.</p>
+                    <a href="#buy" class="cta-button text-white font-semibold py-3 px-6 rounded-soft inline-block">Buy Now</a>
+                </div>
+                <div class="carousel-item kit-card bg-green-50 p-8 rounded-soft w-80">
+                    <div class="icon-container mb-6">
+                        <i class="fas fa-leaf text-3xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-lg md:text-xl font-semibold mb-3">Organic Fertilizer</h3>
+                    <p class="text-gray-600 mb-4">Nourish your plants naturally.</p>
+                    <a href="#buy" class="cta-button text-white font-semibold py-3 px-6 rounded-soft inline-block">Buy Now</a>
+                </div>
+            </div>
+            <div class="text-center mt-10">
+                <a href="#stores" class="secondary-button font-semibold py-3 px-8 rounded-soft inline-block">Find Nearby Stores</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Community Gallery -->
+    <section class="bg-green-50 section-padding">
+        <div class="container mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16 text-green-800">Community Gallery</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-soft text-center">
+                    <div class="icon-container mb-4">
+                        <i class="fas fa-camera text-3xl text-green-600"></i>
+                    </div>
+                    <p class="text-gray-600">Priya’s Balcony Garden</p>
+                </div>
+                <div class="bg-white p-6 rounded-soft text-center">
+                    <div class="icon-container mb-4">
+                        <i class="fas fa-camera text-3xl text-green-600"></i>
+                    </div>
+                    <p class="text-gray-600">Anil’s Rooftop Harvest</p>
+                </div>
+                <div class="bg-white p-6 rounded-soft text-center">
+                    <div class="icon-container mb-4">
+                        <i class="fas fa-camera text-3xl text-green-600"></i>
+                    </div>
+                    <p class="text-gray-600">Sneha’s Herb Corner</p>
+                </div>
+            </div>
+            <div class="text-center mt-10">
+                <a href="#upload" class="cta-button text-white font-semibold py-3 px-8 rounded-soft inline-block">Join the Gallery</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Get Grow@Home -->
+    <section class="bg-white section-padding">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-16 text-green-800">Get Grow@Home</h2>
+            <div class="flex flex-col items-center justify-center">
+                <div class="icon-container mb-8">
+                    <i class="fas fa-mobile-alt text-6xl text-green-600"></i>
+                </div>
+                <div class="download-buttons">
+                    <a href="https://v0-grow-home-onboarding.vercel.app/" class="cta-button text-white font-semibold py-3 px-8 rounded-soft inline-block">Try Web App</a>
+                    <a href="https://drive.google.com/file/d/1z96G6AOeGWFjta5adaOKw4wQZurIkuad/view?usp=sharing" class="cta-button text-white font-semibold py-3 px-8 rounded-soft inline-block">Download for Android</a>
+                    <a href="#ios" class="secondary-button font-semibold py-3 px-8 rounded-soft inline-block">Coming Soon on iOS</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-green-800 text-white section-padding">
+        <div class="container mx-auto text-center">
+            <p class="mb-6">Contact: <a href="mailto:grow-at-home@outlook.com" class="underline hover:text-green-300">grow-at-home@outlook.com</a></p>
+            <div class="flex justify-center space-x-6 mb-6">
+                <a href="#about" class="hover:text-green-300">About</a>
+                <a href="#faq" class="hover:text-green-300">FAQ</a>
+                <a href="#blog" class="hover:text-green-300">Blog</a>
+                <a href="#privacy" class="hover:text-green-300">Privacy Policy</a>
+            </div>
+            <div class="flex justify-center space-x-8">
+                <a href="#instagram"><i class="fab fa-instagram text-2xl hover:text-green-300"></i></a>
+                <a href="#youtube"><i class="fab fa-youtube text-2xl hover:text-green-300"></i></a>
+                <a href="#facebook"><i class="fab fa-facebook text-2xl hover:text-green-300"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>
